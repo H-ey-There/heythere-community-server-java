@@ -13,7 +13,7 @@ import javax.persistence.*;
 public class LargeComment extends BaseTimeEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "larget_commnet_id")
+    @Column(name = "large_comment_id")
     private Long id;
 
     private String largeComment;
@@ -32,5 +32,10 @@ public class LargeComment extends BaseTimeEntity {
         this.largeComment = largeComment;
         this.comment = comment;
         this.user = user;
+    }
+
+    public LargeComment addLargeCommentToComment(Comment comment) {
+        comment.getLargeComments().add(this);
+        return this;
     }
 }

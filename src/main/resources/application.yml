@@ -5,6 +5,17 @@ spring:
     console:
       path: /h2
       enabled: true
+  jpa:
+    show-sql: true
+    hibernate:
+      ddl-auto: update
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.H2Dialect
+  servlet:
+    multipart:
+      max-file-size: 10MB
+      max-request-size: 10MB
 
 server:
   port: 8081
@@ -17,6 +28,33 @@ management:
 eureka:
   client:
     serviceUrl:
-      defaultZone: http://localhost:8761/eureka/
+      defaultZone: http://0.0.0.0:8761/eureka/
     register-with-eureka: true
     fetch-registry: true
+
+
+
+
+
+#cloud:
+#  aws:
+#    s3:
+#      bucket: heythere-file-store
+#    region:
+#      static: ap-northeast-2
+#    credentials:
+#  access-key: AKIA2NQPIKGQT7ZJUJ7U
+#secret-key: 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
+#      accessKey: AKIAJJNZPGCCVVKRM2UA
+#      secretKey: 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#
+cloud:
+  aws:
+    s3:
+      bucket: heythere-file-store
+    credentials:
+      accessKey: AKIAJJNZPGCCVVKRM2UA
+      secretKey: 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#
+    region:
+      static: ap-northeast-2
+    stack:
+      auto: false

@@ -38,4 +38,9 @@ public class Comment extends BaseTimeEntity {
         this.post = post;
         this.largeComments = largeComments;
     }
+
+    public Comment addCommentToPost(final Post post) {
+        post.getComments().add(this);
+        return this;
+    }
 }

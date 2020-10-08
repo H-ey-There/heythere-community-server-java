@@ -10,26 +10,24 @@ import javax.persistence.*;
 @Getter
 @NoArgsConstructor
 @Entity
-public class Picture extends BaseTimeEntity {
+public class PostAndUser extends BaseTimeEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "picture_id")
+    @Column(name = "post_user_id")
     private Long id;
 
-    private String url;
+    @ManyToOne
+    @JoinColumn(name = "user_id")
+    private User user;
 
     @ManyToOne
     @JoinColumn(name = "post_id")
     private Post post;
 
     @Builder
-    public Picture(Long id, String url, Post post) {
+    public PostAndUser(Long id, User user, Post post) {
         this.id = id;
-        this.url = url;
+        this.user = user;
         this.post = post;
-    }
-
-    public void addPictureToPost(final Post post) {
-        post.getPictures().add(this);
     }
 }

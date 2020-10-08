@@ -1,5 +1,6 @@
 package com.heythere.community.post.model;
 
+import com.heythere.community.post.shared.CurrentUser;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -24,5 +25,15 @@ public class User {
         this.email = email;
         this.name = name;
         this.img = img;
+    }
+
+    public User updateUserEntityAndReturn(final CurrentUser currentUser) {
+        if (!currentUser.getEmail().equals(email))
+            this.email = currentUser.getEmail();
+        if(!currentUser.getName().equals(name))
+            this.name = currentUser.getName();
+        if (currentUser.getImg() != null && !currentUser.getImg().equals(img))
+            this.img = currentUser.getImg();
+        return this;
     }
 }
