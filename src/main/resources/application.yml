@@ -47,14 +47,3 @@ eureka:
 #secret-key: C/cFaluos6m32Y63goXiqSh/NFf1IcBDuSvtvRWa
 #      accessKey: AKIAJJNZPGCCVVKRM2UA
 #      secretKey: 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#
-cloud:
-  aws:
-    s3:
-      bucket: heythere-file-store
-    credentials:
-      accessKey: AKIAJJNZPGCCVVKRM2UA
-      secretKey: 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#
-    region:
-      static: ap-northeast-2
-    stack:
-      auto: false
