@@ -1,14 +1,18 @@
 package com.heythere.community.post.service;
 
-import com.heythere.community.compression.service.FileCompressionService;
-import com.heythere.community.post.shared.CurrentUser;
-import com.heythere.community.post.dto.request.CommentRegisterRequestDto;
-import com.heythere.community.post.dto.request.LargeCommentRegisterRequestDto;
+import com.heythere.community.post.exception.ResourceNotFoundException;
+import com.heythere.community.post.mapper.CommentResponseMapper;
+import com.heythere.community.post.dto.CommunityLookupRequestDto;
+import com.heythere.community.post.dto.PressGoodOrBadButtonRequestDto;
+import com.heythere.community.post.mapper.GoodOrBadPressedStatusResponseMapper;
+import com.heythere.community.post.dto.CommentRegisterRequestDto;
+import com.heythere.community.post.dto.LargeCommentRegisterRequestDto;
 import com.heythere.community.post.mapper.PostResponseMapper;
 import com.heythere.community.post.model.User;
 import com.heythere.community.post.repository.*;
-import com.heythere.community.s3.service.AmazonS3StorageService;
+import com.heythere.community.post.service.impl.AmazonS3StorageService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Pageable;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -24,11 +28,13 @@ public abstract class CommunityService {
     protected final PictureRepository pictureRepository;
     protected final CommentRepository commentRepository;
     protected final LargeCommentRepository largeCommentRepository;
+    protected final PostAndUserRepository postAndUserRepository;
     protected final FileCompressionService fileCompressionService;
     protected final AmazonS3StorageService amazonS3StorageService;
 
-    public abstract List<PostResponseMapper> findAllPost(final Long userId);
-    public abstract PostResponseMapper findPostById(final Long postId);
+    public abstract List<PostResponseMapper> findAllPost(final CommunityLookupRequestDto payload, final Pageable pageable);
+    public abstract PostResponseMapper findPostById(final Long postId, final CommunityLookupRequestDto payload);
+    public abstract List<CommentResponseMapper> findAllComments(Long postId);
     public abstract Long registerPostWithFiles(final Long requestUserId,
                                                final String title,
                                                final String content,
@@ -39,26 +45,19 @@ public abstract class CommunityService {
     public abstract Long registerComment(final CommentRegisterRequestDto payload);
     public abstract Long registerLargeComment(final LargeCommentRegisterRequestDto payload);
 
+    public abstract void updateComment(final CommentRegisterRequestDto payload);
+    public abstract void updateLargeComment(final LargeCommentRegisterRequestDto payload);
 
-    protected User getCurrentUser(final Long id) {
-        final String GET_AUTH_USER_URL = "http://heythere-zuul-server/auth/user/%s";
+    public abstract void deletePost(final Long postId);
+    public abstract void deleteComment(final Long commentId);
+    public abstract void deleteLargeComment(final Long largeCommentId);
 
-        final CurrentUser user =
-                restTemplate.postForObject(String.format(GET_AUTH_USER_URL,id), null, CurrentUser.class);
+    public abstract GoodOrBadPressedStatusResponseMapper pressedLikeOrDislikeButtonOnPost(PressGoodOrBadButtonRequestDto payload);
 
-        final Optional<User> target = userRepository.findById(id);
-        if (target.isPresent()) {
-            return userRepository.findById(id)
-                    .orElseThrow(() -> new RuntimeException("User Not Found"))
-                    .updateUserEntityAndReturn(user);
-        }
 
-        return userRepository.save(User.builder()
-                .id(user.getId())
-                .email(user.getEmail())
-                .name(user.getName())
-                .img(user.getImg())
-                .build());
+    protected User getUser(final Long id) {
+        return userRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("User","id",id));
     }
 
 }

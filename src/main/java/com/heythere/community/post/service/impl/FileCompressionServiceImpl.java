@@ -1,5 +1,6 @@
-package com.heythere.community.compression.service;
+package com.heythere.community.post.service.impl;
 
+import com.heythere.community.post.service.FileCompressionService;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 

@@ -23,26 +23,47 @@ public class Post extends BaseTimeEntity {
     @OneToMany(mappedBy = "post")
     private List<Picture> pictures = new ArrayList<>();
 
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id")
     private User user;
 
     @OneToMany(mappedBy = "post")
-    @Column(nullable = true)
     private List<Comment> comments = new ArrayList<>();
+
+    private Integer good;
+    private Integer bad;
+
+    @OneToMany(mappedBy = "post")
+    private List<PostAndUser> status = new ArrayList<>();
+
+    @PrePersist
+    public void perPersist() {
+        good = good == null ? 0 : good;
+        bad = bad == null ? 0 : bad;
+    }
 
     @Builder
     public Post(Long id,
                 String title,
                 String content,
                 List<Picture> pictures,
-                User user,
-                List<Comment> comments) {
+                User user, List<Comment> comments,
+                Integer good,
+                Integer bad,
+                List<PostAndUser> status) {
         this.id = id;
         this.title = title;
         this.content = content;
         this.pictures = pictures;
         this.user = user;
         this.comments = comments;
+        this.good = good;
+        this.bad = bad;
+        this.status = status;
+    }
+
+    public void updateGoodOrBadCount(final int good, final int bad) {
+        this.good = good;
+        this.bad = bad;
     }
 }

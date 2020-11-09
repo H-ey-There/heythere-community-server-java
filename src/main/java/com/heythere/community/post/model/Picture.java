@@ -28,8 +28,4 @@ public class Picture extends BaseTimeEntity {
         this.url = url;
         this.post = post;
     }
-
-    public void addPictureToPost(final Post post) {
-        post.getPictures().add(this);
-    }
 }

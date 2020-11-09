@@ -16,7 +16,19 @@ spring:
     multipart:
       max-file-size: 10MB
       max-request-size: 10MB
-
+  kafka:
+    template:
+      default-topic: library-events
+    consumer:
+      bootstrap-servers: localhost:9092,localhost:9093,localhost:9094
+      key-deserializer: org.apache.kafka.common.serialization.IntegerDeserializer
+      value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      group-id: library-events-listener-group
+    producer:
+      bootstrap-servers:
+        - localhost:9092,localhost:9093,localhost:9094
+      key-serializer: org.apache.kafka.common.serialization.IntegerSerializer
+      value-serializer: org.apache.kafka.common.serialization.StringSerializer
 server:
   port: 8081
 management:
@@ -32,18 +44,22 @@ eureka:
     register-with-eureka: true
     fetch-registry: true
 
+springdoc:
+  swagger-ui:
+    path: /swagger
+    operations-sorter: method
+  api-docs:
+    enabled: true
 
+cloud:
+  aws:
+    credentials:
+      accessKey: AKIAJF2FHSSU7QJJMHXA
+      secretKey: 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
+    s3:
+      bucket: heythere-file-store
+    region:
+      static: ap-northeast-2
+    stack:
+      auto: false
 
-
-
-#cloud:
-#  aws:
-#    s3:
-#      bucket: heythere-file-store
-#    region:
-#      static: ap-northeast-2
-#    credentials:
-#  access-key: AKIA2NQPIKGQT7ZJUJ7U
-#secret-key: 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
-#      accessKey: AKIAJJNZPGCCVVKRM2UA
-#      secretKey: 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#

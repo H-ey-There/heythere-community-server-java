@@ -1,15 +1,20 @@
 package com.heythere.community.post.service.impl;
 
-import com.heythere.community.post.dto.request.CommentRegisterRequestDto;
-import com.heythere.community.post.dto.request.LargeCommentRegisterRequestDto;
+import com.heythere.community.post.mapper.CommentResponseMapper;
+import com.heythere.community.post.dto.CommentRegisterRequestDto;
+import com.heythere.community.post.dto.CommunityLookupRequestDto;
+import com.heythere.community.post.dto.LargeCommentRegisterRequestDto;
+import com.heythere.community.post.dto.PressGoodOrBadButtonRequestDto;
+import com.heythere.community.post.exception.BadRequestException;
+import com.heythere.community.post.mapper.GoodOrBadPressedStatusResponseMapper;
 import com.heythere.community.post.mapper.PostResponseMapper;
 import com.heythere.community.post.exception.ResourceNotFoundException;
 import com.heythere.community.post.model.*;
 import com.heythere.community.post.repository.*;
 import com.heythere.community.post.service.CommunityService;
-import com.heythere.community.compression.service.FileCompressionService;
-import com.heythere.community.s3.service.AmazonS3StorageService;
+import com.heythere.community.post.service.FileCompressionService;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.RestTemplate;
@@ -18,6 +23,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -29,26 +35,49 @@ public class CommunityServiceImpl extends CommunityService {
                                 PictureRepository pictureRepository,
                                 CommentRepository commentRepository,
                                 LargeCommentRepository largeCommentRepository,
+                                PostAndUserRepository postAndUserRepository,
                                 FileCompressionService fileCompressionService,
                                 AmazonS3StorageService amazonS3StorageService) {
-        super(  restTemplate,
+        super(restTemplate,
                 userRepository,
                 postRepository,
                 pictureRepository,
                 commentRepository,
                 largeCommentRepository,
+                postAndUserRepository,
                 fileCompressionService,
                 amazonS3StorageService);
     }
 
     @Override
-    public List<PostResponseMapper> findAllPost(Long userId) {
-        return null;
+    @Transactional
+    public List<PostResponseMapper> findAllPost(final CommunityLookupRequestDto payload, final Pageable pageable) {
+        final User communityOwner = getUser(payload.getCommunityOwnerId());
+        final User requestUser = getUser(payload.getRequestUserId());
+
+        return postRepository.findAllByUserOrderByCreatedAtDesc(communityOwner, pageable).stream()
+                .map(post -> PostResponseMapper.of(post, requestUser))
+                .collect(Collectors.toList());
     }
 
     @Override
-    public PostResponseMapper findPostById(Long postId) {
-        return null;
+    @Transactional
+    public PostResponseMapper findPostById(final Long postId, final CommunityLookupRequestDto payload) {
+        final Post post = postRepository.findById(postId)
+                .orElseThrow(() -> new ResourceNotFoundException("Post", "id", postId));
+
+        final User requestUser = getUser(payload.getRequestUserId());
+        return PostResponseMapper.of(post, requestUser);
+    }
+
+    @Override
+    @Transactional
+    public List<CommentResponseMapper> findAllComments(final Long postId) {
+        return postRepository.findById(postId)
+                .orElseThrow(() -> new ResourceNotFoundException("Post", "id", postId))
+                .getComments().stream()
+                .map(CommentResponseMapper::of)
+                .collect(Collectors.toList());
     }
 
     @Override
@@ -56,31 +85,23 @@ public class CommunityServiceImpl extends CommunityService {
     public Long registerPostWithFiles(final Long requestUserId,
                                       final String title,
                                       final String content,
-                                      final List<MultipartFile> img) throws IOException {
-        log.info("file : {}" , img);
+                                      final List<MultipartFile> images) throws IOException {
 
-        final User user = getCurrentUser(requestUserId);
+        final Post post = postRepository.saveAndFlush(
+                Post.builder()
+                        .user(getUser(requestUserId))
+                        .title(title)
+                        .content(content)
+                        .build()
+        );
 
-        final Post post = postRepository.save(Post.builder()
-                .user(user)
-                .title(title)
-                .content(content)
-                .build());
 
-        img.forEach(file -> {
-            try {
-                final Picture picture = pictureRepository.save(Picture.builder()
-                        .url(amazonS3StorageService.upload(file, "post"))
-                        .post(post)
-                        .build());
-
-                picture.addPictureToPost(post);
-                log.info("get picture url : {}", picture.getUrl());
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-        });
-
+        for (final MultipartFile img : images) {
+            pictureRepository.saveAndFlush(Picture.builder()
+                    .url(amazonS3StorageService.upload(img, post, "post"))
+                    .post(post)
+                    .build());
+        }
         return post.getId();
     }
 
@@ -89,10 +110,11 @@ public class CommunityServiceImpl extends CommunityService {
     public Long registerPostWithoutFiles(final Long requestUserId,
                                          final String title,
                                          final String content) {
+
         return postRepository.save(Post.builder()
                 .title(title)
                 .content(content)
-                .user(getCurrentUser(requestUserId))
+                .user(getUser(requestUserId))
                 .build()).getId();
     }
 
@@ -104,7 +126,7 @@ public class CommunityServiceImpl extends CommunityService {
 
         final Comment comment = commentRepository.save(Comment.builder()
                 .comment(payload.getComment())
-                .user(getCurrentUser(payload.getRequestUserId()))
+                .user(getUser(payload.getRequestUserId()))
                 .post(post)
                 .build());
 
@@ -119,10 +141,72 @@ public class CommunityServiceImpl extends CommunityService {
 
         final LargeComment largeComment = largeCommentRepository.save(LargeComment.builder()
                 .largeComment(payload.getLargeComment())
-                .user(getCurrentUser(payload.getRequestUserId()))
+                .user(getUser(payload.getRequestUserId()))
                 .comment(comment)
                 .build());
 
         return largeComment.addLargeCommentToComment(comment).getId();
+    }
+
+    @Override
+    @Transactional
+    public void updateComment(final CommentRegisterRequestDto payload) {
+
+    }
+
+    @Override
+    @Transactional
+    public void updateLargeComment(final LargeCommentRegisterRequestDto payload) {
+
+
+    }
+
+    @Override
+    @Transactional
+    public void deletePost(final Long postId) {
+        postRepository.deleteById(postId);
+    }
+
+    @Override
+    @Transactional
+    public void deleteComment(final Long commentId) {
+        commentRepository.deleteById(commentId);
+    }
+
+    @Override
+    @Transactional
+    public void deleteLargeComment(final Long largeCommentId) {
+        largeCommentRepository.deleteById(largeCommentId);
+    }
+
+    @Override
+    @Transactional
+    public GoodOrBadPressedStatusResponseMapper pressedLikeOrDislikeButtonOnPost(final PressGoodOrBadButtonRequestDto payload) {
+        if (payload.getIsGood().equals(true) && payload.getIsBad().equals(true)) {
+            new BadRequestException("Like And Dislike status must be different!");
+        }
+
+        final User user = getUser(payload.getRequestUserId());
+        final Post post = postRepository.findById(payload.getPostId())
+                .orElseThrow(() -> new ResourceNotFoundException("Post", "id", payload.getPostId()));
+
+        final PostAndUser status = !postAndUserRepository.existsByUserAndPost(user, post)
+                ?
+                postAndUserRepository.save(PostAndUser.builder()
+                        .user(user)
+                        .post(post)
+                        .goodStatus(payload.getIsGood())
+                        .badStatus(payload.getIsBad())
+                        .build())
+                :
+                postAndUserRepository.findByUserAndPost(user, post)
+                        .updateStatus(payload.getIsGood(), payload.getIsBad())
+                        .addStatusToUserAndPost(user, post);
+
+        final int goodCount = postAndUserRepository.countAllByUserAndPostAndGoodStatusIsTrue(user, post);
+        final int badCount = postAndUserRepository.countAllByUserAndPostAndBadStatusIsTrue(user, post);
+        post.updateGoodOrBadCount(goodCount, badCount);
+
+        return new GoodOrBadPressedStatusResponseMapper(goodCount, badCount, status.getGoodStatus(), status.getBadStatus());
     }
 }
